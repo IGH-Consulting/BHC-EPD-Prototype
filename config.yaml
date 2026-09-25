@@ -1,0 +1,129 @@
+# ---------------------------------------------------------------
+# EPD Expert Agent – prototype configuratie
+# ---------------------------------------------------------------
+
+# Backends -------------------------------------------------------
+# store:     neo4j  | memory   (memory = in-process, geen Docker nodig)
+# llm:       ollama | fake     (fake = extractieve demo-modus, geen model nodig)
+# embedding: ollama | hash     (hash = lexicale n-gram embedding, geen model nodig)
+backends:
+  store: neo4j
+  llm: ollama
+  embedding: ollama
+
+ollama:
+  url: http://localhost:11434
+  chat_model: qwen2.5:3b        # CPU-vriendelijk, redelijk Nederlands. Alternatief: qwen2.5:1.5b (sneller)
+  embed_model: bge-m3           # meertalig, 1024 dimensies
+  temperature: 0.1
+  num_ctx: 4096
+  timeout_s: 300
+
+neo4j:
+  uri: bolt://localhost:7687
+  user: neo4j
+  password: epdexpert123
+  database: neo4j
+
+memory_store:
+  path: .cache/memory_store.pkl
+
+# Ingestie -------------------------------------------------------
+ingest:
+  sources:
+    - path: data/standaard
+    - path: data/ziekenhuis
+  chunk_max_chars: 900
+  llm_concept_extraction: false   # true = extra concepten via LLM (traag op CPU)
+
+# Retrieval ------------------------------------------------------
+retrieval:
+  top_k: 6
+  vector_candidates: 20
+  concept_bonus: 0.05      # per gedeeld concept tussen vraag en chunk
+  local_bonus: 0.04        # ziekenhuisspecifieke kennis wint bij gelijke relevantie
+  refine_expansion: true   # volg VERFIJNT-relaties standaard <-> werkinstructie
+
+# Drempels verschillen per embedding-model (cosine similarity).
+# Kalibreer ze met: python scripts/evaluate.py  (toont cosine-verdeling relevant vs. irrelevant)
+thresholds:
+  ollama:
+    confidence_high: 0.62
+    confidence_low: 0.45
+    faq_duplicate: 0.86
+    faq_shortcut: 0.93
+    router_min: 0.35
+  hash:
+    confidence_high: 0.40
+    confidence_low: 0.30
+    faq_duplicate: 0.70
+    faq_shortcut: 0.85
+    router_min: 0.15
+
+# Orkestratie ----------------------------------------------------
+orchestration:
+  max_agents: 2            # max. aantal module-agents per vraag (elke agent = 1 LLM-call)
+
+# Dynamische FAQ -------------------------------------------------
+faq:
+  db_path: .cache/faq.sqlite
+  half_life_days: 14       # zonder nieuwe vragen halveert de score elke 14 dagen
+  min_score_visible: 0.75  # onder deze score niet meer tonen
+  prune_below: 0.2         # onder deze score verwijderen
+  max_items: 15
+  min_confidence: middel   # alleen 'goede' vragen: antwoord met ten minste deze betrouwbaarheid
+  min_question_chars: 12
+
+# Domeinmodel ----------------------------------------------------
+# Modules en werkgroepen: elke module krijgt een eigen agent.
+modules:
+  Medicatie:
+    werkgroep: Werkgroep Medicatie
+    beschrijving: >
+      Voorschrijven van geneesmiddelen, medicatiebewaking, interacties, toedienlijst,
+      toedienregistratie, barcode scannen, dubbele controle, medicatieverificatie,
+      thuismedicatie en ontslagmedicatie.
+  Patiëntlogistiek:
+    werkgroep: Werkgroep Patiëntlogistiek
+    beschrijving: >
+      Opname registreren, bed toewijzen, overplaatsen, ontslag voorbereiden en afronden,
+      bedplanning en opnameplanning.
+  Orders & Uitslagen:
+    werkgroep: Werkgroep Orders & Diagnostiek
+    beschrijving: >
+      Laboratoriumaanvragen, ordersets, orderstatus, verzendfouten, uitslagen bekijken,
+      orders annuleren, koppeling met het laboratorium.
+  Verpleegkundig dossier:
+    werkgroep: Werkgroep Verpleegkunde
+    beschrijving: >
+      Vitale functies en metingen, vroege waarschuwingsscore EWS, zorgplan,
+      verpleegkundige interventies en dienstoverdracht SBAR.
+
+# Begrippenlijst (taxonomie) voor de kennisgraaf.
+# Elk concept wordt gekoppeld aan een module; synoniemen worden herkend in tekst en vragen.
+concepts:
+  Medicatiebewaking: {module: Medicatie, synoniemen: [medicatiebewaking, interactie, interacties, contra-indicatie, signaal, signalen]}
+  Overrulen: {module: Medicatie, synoniemen: [overrulen, overrule, overruled, reden van overrulen]}
+  Doseringsregel: {module: Medicatie, synoniemen: [doseringsregel, doseringsregels, maximale dosering, dosis te hoog]}
+  Voorschrift: {module: Medicatie, synoniemen: [voorschrift, voorschrijven, recept, accorderen]}
+  Zo-nodig medicatie: {module: Medicatie, synoniemen: [zo-nodig, zo nodig, prn]}
+  Toedienlijst: {module: Medicatie, synoniemen: [toedienlijst, toediening, toedieningen, toedienen, toegediend]}
+  Niet toegediend: {module: Medicatie, synoniemen: [niet toegediend, niet gegeven, weigert]}
+  Barcode: {module: Medicatie, synoniemen: [barcode, scannen, scanner, scan, polsbandje]}
+  Dubbele controle: {module: Medicatie, synoniemen: [dubbele controle, tweede verpleegkundige, hoog-risico, hoog risico, insuline, heparine]}
+  Medicatieverificatie: {module: Medicatie, synoniemen: [medicatieverificatie, verificatie, geverifieerd, thuismedicatie]}
+  Externe medicatiegegevens: {module: Medicatie, synoniemen: [externe medicatiegegevens, externe gegevens, gegevensuitwisseling, toestemming]}
+  Ontslagmedicatie: {module: Medicatie, synoniemen: [ontslagmedicatie, medicatieoverdracht, overdrachtsdocument]}
+  Artikelbestand: {module: Medicatie, synoniemen: [artikelbestand, geneesmiddelenbestand, artikel]}
+  Opname: {module: Patiëntlogistiek, synoniemen: [opname, opnemen, opnameplanning]}
+  Overplaatsen: {module: Patiëntlogistiek, synoniemen: [overplaatsen, overplaatsing, ander bed]}
+  Ontslag: {module: Patiëntlogistiek, synoniemen: [ontslag, ontslagen, ontslag afronden, ontslag voorbereiden]}
+  Bedplanning: {module: Patiëntlogistiek, synoniemen: [bedplanning, bed toewijzen, bed vrijgeven]}
+  Order: {module: Orders & Uitslagen, synoniemen: [order, orders, openstaande orders, orderset, ordersets]}
+  Labaanvraag: {module: Orders & Uitslagen, synoniemen: [labaanvraag, labaanvragen, laboratorium, lab, bepaling, spoedlab]}
+  Verzendfout: {module: Orders & Uitslagen, synoniemen: [verzendfout, niet verzonden, koppeling, vastgelopen]}
+  Uitslag: {module: Orders & Uitslagen, synoniemen: [uitslag, uitslagen, labuitslag]}
+  Metingen: {module: Verpleegkundig dossier, synoniemen: [meting, metingen, vitale functies, bloeddruk, saturatie]}
+  EWS: {module: Verpleegkundig dossier, synoniemen: [ews, vroege waarschuwingsscore, waarschuwingsscore]}
+  Zorgplan: {module: Verpleegkundig dossier, synoniemen: [zorgplan, interventie, interventies]}
+  Overdracht: {module: Verpleegkundig dossier, synoniemen: [dienstoverdracht, sbar, overdrachtsoverzicht]}

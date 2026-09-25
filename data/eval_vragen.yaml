@@ -1,0 +1,45 @@
+# Kleine gouden set voor evaluatie en drempelkalibratie.
+# verwacht: document-id(s) die in de top-k moeten zitten. Leeg = off-topic (moet 'laag' scoren).
+- vraag: Ik krijg de melding Barcode niet herkend bij het toedienen, wat moet ik doen?
+  verwacht: [std-med-toedienen, wi-barcodescanners]
+  module: Medicatie
+- vraag: Bijna alle barcodes worden niet herkend door de handscanner
+  verwacht: [wi-barcodescanners]
+  module: Medicatie
+- vraag: Voor welke middelen is een dubbele controle verplicht?
+  verwacht: [wi-dubbele-controle]
+  module: Medicatie
+- vraag: De dubbele controle wordt steeds afgebroken, hoe kan dat?
+  verwacht: [wi-dubbele-controle]
+  module: Medicatie
+- vraag: Waarom moet ik nu altijd een reden invullen bij het overrulen van een waarschuwing?
+  verwacht: [std-release-2025-1, std-med-voorschrijven]
+  module: Medicatie
+- vraag: Melding doseringsregel overschreden bij een kind
+  verwacht: [std-med-voorschrijven]
+  module: Medicatie
+- vraag: Geen externe gegevens beschikbaar bij ophalen thuismedicatie
+  verwacht: [std-med-verificatie, wi-med-verificatie]
+  module: Medicatie
+- vraag: Wie doet de medicatieverificatie buiten kantoortijd?
+  verwacht: [wi-med-verificatie]
+  module: Medicatie
+- vraag: Opname kan niet worden afgesloten door openstaande orders
+  verwacht: [std-opname-ontslag, wi-ontslag]
+  module: Patiëntlogistiek
+- vraag: Wanneer mag ik het ontslag afronden?
+  verwacht: [wi-ontslag, std-opname-ontslag]
+  module: Patiëntlogistiek
+- vraag: Een labaanvraag staat op verzendfout, moet ik hem opnieuw aanvragen?
+  verwacht: [wi-lab-spoed, std-orders-lab]
+  module: Orders & Uitslagen
+- vraag: Het lab zegt dat de uitslag klaar is maar ik zie hem niet in het dossier
+  verwacht: [std-orders-lab]
+  module: Orders & Uitslagen
+- vraag: Waarom wordt de vroege waarschuwingsscore niet berekend?
+  verwacht: [std-vpk-dossier]
+  module: Verpleegkundig dossier
+- vraag: Hoe werkt de koffieautomaat op de afdeling?
+  verwacht: []
+- vraag: Waar kan ik mijn parkeerkaart ophalen?
+  verwacht: []
